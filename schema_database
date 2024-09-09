@@ -1,0 +1,22 @@
+CREATE TABLE shops (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    shop_name VARCHAR(255) NOT NULL,
+    shop_address VARCHAR(255) NOT NULL,
+    shop_phone VARCHAR(20) NOT NULL,
+    receipt_footer TEXT,
+    logo_url VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+CREATE TABLE users (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    username VARCHAR(255) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    photo_url VARCHAR(255),      -- Menyimpan URL foto profil pengguna
+    role ENUM('admin', 'staff') NOT NULL DEFAULT 'staff',  -- Menyimpan role pengguna
+    shop_id INT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (shop_id) REFERENCES shops(id) ON DELETE CASCADE
+);
