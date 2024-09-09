@@ -52,7 +52,7 @@ class _CustomerPageState extends State<CustomerPage> {
 
     try {
       final response = await http.post(
-        Uri.parse('https://seputar-it.eu.org/customers/get_customers.php'),
+        Uri.parse('https://seputar-it.eu.org/Customers/get_customers.php'),
         headers: <String, String>{
           'Content-Type': 'application/json; charset=UTF-8',
         },
@@ -106,7 +106,7 @@ class _CustomerPageState extends State<CustomerPage> {
 
     try {
       final response = await http.post(
-        Uri.parse('http://seputar-it.eu.org/customers/add_customer.php'),
+        Uri.parse('http://seputar-it.eu.org/Customers/add_customer.php'),
         headers: <String, String>{
           'Content-Type': 'application/json; charset=UTF-8',
         },
@@ -145,7 +145,7 @@ Future<void> _deleteCustomer(int customerId) async {
 
   try {
     final response = await http.post(
-      Uri.parse('https://seputar-it.eu.org/customers/delete_customer.php'),
+      Uri.parse('https://seputar-it.eu.org/Customers/delete_customer.php'),
       headers: <String, String>{
         'Content-Type': 'application/json; charset=UTF-8',
       },
@@ -184,7 +184,7 @@ Future<void> _updateCustomer(int customerId) async {
 
   try {
     final response = await http.post(
-      Uri.parse('http://seputar-it.eu.org/customers/update_customer.php'),
+      Uri.parse('http://seputar-it.eu.org/Customers/update_customer.php'),
       headers: <String, String>{
         'Content-Type': 'application/json; charset=UTF-8',
       },

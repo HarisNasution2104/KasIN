@@ -4,7 +4,6 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
-
 class CategoriesServicesPage extends StatefulWidget {
   const CategoriesServicesPage({super.key});
 
@@ -33,28 +32,30 @@ class _CategoriesServicesPageState extends State<CategoriesServicesPage> {
   }
 
   Future<void> _fetchCategories() async {
-    if (_shopId.isEmpty) return; // Jika shop_id belum dimuat, keluar
+    if (_shopId.isEmpty) return;
 
-    const url = 'https://seputar-it.eu.org/Kategori/get_kategori.php'; // Ganti dengan URL API get kategori Anda
+    const url = 'https://seputar-it.eu.org/Categories/get_kategori.php';
     final response = await http.post(
       Uri.parse(url),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'shop_id': _shopId}),
     );
 
+    print('Response status: ${response.statusCode}');
+    print('Response body: ${response.body}'); // Tambahkan log ini
+
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
       if (data['status'] == 'success') {
         setState(() {
-          _categories = List<String>.from(data['kategori'].map((item) => item['nama']));
+          _categories =
+              List<String>.from(data['categories'].map((item) => item['name']));
           _isLoading = false;
         });
       } else {
-        // Tangani kesalahan jika diperlukan
         setState(() => _isLoading = false);
       }
     } else {
-      // Tangani kesalahan jika diperlukan
       setState(() => _isLoading = false);
     }
   }
@@ -62,11 +63,12 @@ class _CategoriesServicesPageState extends State<CategoriesServicesPage> {
   Future<void> _addCategory() async {
     final category = _categoryController.text.trim();
     if (category.isNotEmpty && _shopId.isNotEmpty) {
-      const url = 'https://seputar-it.eu.org/Kategori/add_kategori.php'; // Ganti dengan URL API add kategori Anda
+      const url =
+          'https://seputar-it.eu.org/Categories/add_kategori.php'; // Ganti dengan URL API add kategori Anda
       final response = await http.post(
         Uri.parse(url),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'shop_id': _shopId, 'nama': category}),
+        body: jsonEncode({'shop_id': _shopId, 'name': category}),
       );
 
       if (response.statusCode == 200) {
@@ -87,11 +89,12 @@ class _CategoriesServicesPageState extends State<CategoriesServicesPage> {
 
   Future<void> _deleteCategory(String category) async {
     if (_shopId.isNotEmpty) {
-      const url = 'https://seputar-it.eu.org/Kategori/delete_kategori.php'; // Ganti dengan URL API delete kategori Anda
+      const url =
+          'https://seputar-it.eu.org/Categories/delete_kategori.php'; // Ganti dengan URL API delete kategori Anda
       final response = await http.post(
         Uri.parse(url),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'shop_id': _shopId, 'nama': category}),
+        body: jsonEncode({'shop_id': _shopId, 'name': category}),
       );
 
       if (response.statusCode == 200) {
@@ -142,12 +145,14 @@ class _CategoriesServicesPageState extends State<CategoriesServicesPage> {
                                 TextStyle(color: Colors.orange.shade900),
                             border: OutlineInputBorder(
                               borderSide: BorderSide(
-                                  color: Colors.orange.shade900), // Warna garis border
+                                  color: Colors
+                                      .orange.shade900), // Warna garis border
                               borderRadius: BorderRadius.circular(15),
                             ),
                             enabledBorder: OutlineInputBorder(
                               borderSide: BorderSide(
-                                  color: Colors.orange.shade900), // Warna garis border saat tidak fokus
+                                  color: Colors.orange
+                                      .shade900), // Warna garis border saat tidak fokus
                               borderRadius: BorderRadius.circular(15),
                             ),
                             focusedBorder: OutlineInputBorder(
@@ -252,7 +257,8 @@ class _CategoriesServicesPageState extends State<CategoriesServicesPage> {
       builder: (context) {
         return AlertDialog(
           title: const Text('Konfirmasi Hapus'),
-          content: Text('Apakah Anda yakin ingin menghapus kategori "$category"?'),
+          content:
+              Text('Apakah Anda yakin ingin menghapus kategori "$category"?'),
           actions: [
             TextButton(
               onPressed: () {
