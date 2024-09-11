@@ -49,7 +49,7 @@ class _AddJasaPageState extends State<AddJasaPage> {
       body: jsonEncode({
         'name': _nameController.text,
         'price': _priceController.text,
-        'category': _categoryController.text,
+        'category_id': _categoryController.text,
         'warranty': _warrantyController.text,
         'shop_id': _shopId,
       }),

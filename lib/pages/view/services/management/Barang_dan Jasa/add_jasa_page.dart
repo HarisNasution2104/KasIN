@@ -13,16 +13,19 @@ class AddJasaPage extends StatefulWidget {
 
 class _AddJasaPageState extends State<AddJasaPage> {
   final _formKey = GlobalKey<FormState>();
-  String _name = '';
-  double _price = 0.0;
-  String _warranty = '';
-  String _categoryId = '';
-  List<Map<String, String>> _categories = [];
+  late TextEditingController _nameController;
+  late TextEditingController _priceController;
+  late TextEditingController _warrantyController;
+  String? _selectedCategory;
+  List<Map<String, dynamic>> _categories = [];
   String _shopId = '';
 
   @override
   void initState() {
     super.initState();
+    _nameController = TextEditingController();
+    _priceController = TextEditingController();
+    _warrantyController = TextEditingController();
     _loadShopId();
   }
 
@@ -37,21 +40,28 @@ class _AddJasaPageState extends State<AddJasaPage> {
   Future<void> _loadCategories() async {
     try {
       final response = await http.post(
-        Uri.parse('https://seputar-it.eu.org/Kategori/get_kategori.php?'),
+        Uri.parse('https://seputar-it.eu.org/Categories/get_kategori.php'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'shop_id': _shopId}),
       );
 
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body);
-        if (responseData['kategori'] != null && responseData['kategori'] is List) {
+
+        if (responseData['categories'] != null &&
+            responseData['categories'] is List) {
           setState(() {
-            _categories = (responseData['kategori'] as List)
+            _categories = (responseData['categories'] as List)
                 .map((item) => {
-                      'id': item['id']?.toString() ?? '', // Pastikan ID adalah String
-                      'name': item['nama'] as String
+                      'id': item['id'].toString(),
+                      'name': item['name'],
                     })
                 .toList();
+
+            // Set default category if available
+            if (_categories.isNotEmpty) {
+              _selectedCategory = _categories.first['id'];
+            }
           });
         } else {
           _showError('Format data kategori tidak sesuai.');
@@ -66,28 +76,38 @@ class _AddJasaPageState extends State<AddJasaPage> {
 
   Future<void> _submitForm() async {
     if (_formKey.currentState!.validate()) {
-      _formKey.currentState!.save();
+      final name = _nameController.text;
+      final price = double.tryParse(_priceController.text) ?? 0.0;
+      final warranty = _warrantyController.text;
+      final categoryId = _selectedCategory;
 
-      const url = 'https://seputar-it.eu.org/Jasa/add_jasa.php';
+      if (categoryId == null) {
+        _showError('Kategori harus dipilih.');
+        return;
+      }
 
-      final response = await http.post(
-        Uri.parse(url),
-        headers: {'Content-Type': 'application/json; charset=UTF-8'},
-        body: jsonEncode({
-          'shop_id': _shopId,
-          'name': _name,
-          'price': _price,
-          'category_id': _categoryId,
-          'warranty': _warranty,
-        }),
-      );
+      try {
+        final response = await http.post(
+          Uri.parse('https://seputar-it.eu.org/Jasa/add_jasa.php'),
+          headers: {'Content-Type': 'application/json; charset=UTF-8'},
+          body: jsonEncode({
+            'shop_id': _shopId,
+            'name': name,
+            'price_sell': price,
+            'category_id': categoryId,
+            'warranty': warranty,
+          }),
+        );
 
-      final data = jsonDecode(response.body);
+        final data = jsonDecode(response.body);
 
-      if (data['status'] == 'success') {
-        Navigator.of(context).pop();
-      } else {
-        _showError(data['message'] ?? 'Gagal menambahkan jasa.');
+        if (data['status'] == 'success') {
+          Navigator.of(context).pop();
+        } else {
+          _showError(data['message'] ?? 'Gagal menambahkan jasa.');
+        }
+      } catch (e) {
+        _showError('Terjadi kesalahan: $e');
       }
     }
   }
@@ -139,9 +159,9 @@ class _AddJasaPageState extends State<AddJasaPage> {
           key: _formKey,
           child: Column(
             children: <Widget>[
-              const SizedBox(height: 16),
               // Nama Jasa
               TextFormField(
+                controller: _nameController,
                 decoration: const InputDecoration(labelText: 'Nama Jasa'),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
@@ -149,24 +169,23 @@ class _AddJasaPageState extends State<AddJasaPage> {
                   }
                   return null;
                 },
-                onSaved: (value) => _name = value!,
               ),
               // Kategori
               Row(
                 children: [
                   Expanded(
                     child: DropdownButtonFormField<String>(
-                      value: _categoryId.isNotEmpty ? _categoryId : null,
+                      value: _selectedCategory,
                       decoration: const InputDecoration(labelText: 'Kategori'),
                       items: _categories.map((category) {
                         return DropdownMenuItem<String>(
                           value: category['id'],
-                          child: Text(category['name'] ?? ''), // Pastikan name tidak null
+                          child: Text(category['name']),
                         );
                       }).toList(),
                       onChanged: (value) {
                         setState(() {
-                          _categoryId = value ?? ''; // Berikan nilai default jika null
+                          _selectedCategory = value;
                         });
                       },
                       validator: (value) {
@@ -185,6 +204,7 @@ class _AddJasaPageState extends State<AddJasaPage> {
               ),
               // Harga
               TextFormField(
+                controller: _priceController,
                 decoration: const InputDecoration(labelText: 'Harga'),
                 keyboardType: TextInputType.number,
                 validator: (value) {
@@ -193,18 +213,18 @@ class _AddJasaPageState extends State<AddJasaPage> {
                   }
                   return null;
                 },
-                onSaved: (value) => _price = double.parse(value!),
               ),
               // Garansi
               TextFormField(
+                controller: _warrantyController,
                 decoration: const InputDecoration(labelText: 'Garansi'),
-                onSaved: (value) => _warranty = value!,
               ),
               const SizedBox(height: 20),
               ElevatedButton(
                 onPressed: _submitForm,
                 style: ElevatedButton.styleFrom(
-                    minimumSize: const Size(double.infinity, 50), // Adjust button size
+                    minimumSize:
+                        const Size(double.infinity, 50), // Adjust button size
                     backgroundColor: Colors.orange.shade900,
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12.0))),

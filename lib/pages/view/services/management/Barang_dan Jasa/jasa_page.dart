@@ -156,7 +156,7 @@ class _JasaPageState extends State<JasaPage> {
   @override
   Widget build(BuildContext context) {
     final currencyFormat =
-        NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ',decimalDigits: 0);
+        NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
 
     return Scaffold(
       appBar: AppBar(
@@ -171,11 +171,15 @@ class _JasaPageState extends State<JasaPage> {
           PopupMenuButton<String>(
             onSelected: _handleMenuSelection,
             itemBuilder: (context) => [
-              const PopupMenuItem(value: 'import_excel', child: Text('Import Excel')),
-              const PopupMenuItem(value: 'export_excel', child: Text('Export Excel')),
+              const PopupMenuItem(
+                  value: 'import_excel', child: Text('Import Excel')),
+              const PopupMenuItem(
+                  value: 'export_excel', child: Text('Export Excel')),
               const PopupMenuItem(value: 'settings', child: Text('Pengaturan')),
-              const PopupMenuItem(value: 'fix_stock', child: Text('Fix Data Stok')),
-              const PopupMenuItem(value: 'print_stock', child: Text('Cetak Stok')),
+              const PopupMenuItem(
+                  value: 'fix_stock', child: Text('Fix Data Stok')),
+              const PopupMenuItem(
+                  value: 'print_stock', child: Text('Cetak Stok')),
             ],
             icon: const Icon(Icons.more_vert, color: Colors.white),
           ),
@@ -202,8 +206,10 @@ class _JasaPageState extends State<JasaPage> {
                     });
                   },
                   itemBuilder: (context) => [
-                    const PopupMenuItem(value: 'Nama', child: Text('Sort by Nama')),
-                    const PopupMenuItem(value: 'Harga', child: Text('Sort by Harga')),
+                    const PopupMenuItem(
+                        value: 'Nama', child: Text('Sort by Nama')),
+                    const PopupMenuItem(
+                        value: 'Harga', child: Text('Sort by Harga')),
                   ],
                   child: Icon(FontAwesomeIcons.arrowUpShortWide,
                       color: Colors.orange.shade900),
@@ -220,7 +226,8 @@ class _JasaPageState extends State<JasaPage> {
                         });
                       },
                       decoration: InputDecoration(
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+                        contentPadding:
+                            const EdgeInsets.symmetric(horizontal: 12),
                         labelText: 'Cari Jasa',
                         labelStyle: TextStyle(color: Colors.orange.shade900),
                         border: OutlineInputBorder(
@@ -271,7 +278,6 @@ class _JasaPageState extends State<JasaPage> {
                                   ),
                                 ),
                               ),
-
                             ],
                           ),
                           subtitle: Column(
@@ -282,20 +288,20 @@ class _JasaPageState extends State<JasaPage> {
                                 mainAxisAlignment:
                                     MainAxisAlignment.spaceBetween,
                                 children: [
-                              Text(
-                                jasa['unique_code'] ?? '',
-                                style: TextStyle(
-                                  color: Colors.orange.shade900,
-                                  fontStyle: FontStyle.italic,
-                                ),
-                              ),
+                                  Text(
+                                    jasa['code'] ?? '',
+                                    style: TextStyle(
+                                      color: Colors.orange.shade900,
+                                      fontStyle: FontStyle.italic,
+                                    ),
+                                  ),
                                   Text(
                                     style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 18,
-                                  ),
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 18,
+                                    ),
                                     currencyFormat.format(
-                                      double.parse(jasa['price'] ?? '0'),
+                                      double.parse(jasa['price_sell'] ?? '0'),
                                     ),
                                   ),
                                 ],

@@ -26,8 +26,10 @@ class _EditJasaPageState extends State<EditJasaPage> {
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.jasa['name'] ?? '');
-    _priceController = TextEditingController(text: widget.jasa['price']?.toString() ?? '');
-    _warrantyController = TextEditingController(text: widget.jasa['warranty'] ?? '');
+    _priceController = TextEditingController(
+        text: widget.jasa['price_sell']?.toString() ?? '');
+    _warrantyController =
+        TextEditingController(text: widget.jasa['warranty'] ?? '');
     _selectedCategoryId = widget.jasa['category_id']?.toString();
     _loadShopId();
   }
@@ -43,22 +45,24 @@ class _EditJasaPageState extends State<EditJasaPage> {
   Future<void> _loadCategories() async {
     try {
       final response = await http.post(
-        Uri.parse('https://seputar-it.eu.org/Kategori/get_kategori.php'),
+        Uri.parse('https://seputar-it.eu.org/Categories/get_kategori.php'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'shop_id': _shopId}),
       );
 
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body);
-        if (responseData['kategori'] != null && responseData['kategori'] is List) {
+        if (responseData['categories'] != null &&
+            responseData['categories'] is List) {
           setState(() {
-            _categories = (responseData['kategori'] as List)
+            _categories = (responseData['categories'] as List)
                 .map((item) => {
                       'id': item['id'].toString(),
-                      'name': item['nama'],
+                      'name': item['name'],
                     })
                 .toList();
 
+            // Ensure the current category is in the list or set to the first available
             if (_selectedCategoryId != null &&
                 _categories.any((cat) => cat['id'] == _selectedCategoryId)) {
               // Do nothing, _selectedCategoryId is valid
@@ -86,7 +90,7 @@ class _EditJasaPageState extends State<EditJasaPage> {
           body: jsonEncode({
             'id': widget.jasa['id'],
             'name': _nameController.text,
-            'price': _priceController.text,
+            'price_sell': double.tryParse(_priceController.text) ?? 0.0,
             'category_id': _selectedCategoryId,
             'warranty': _warrantyController.text,
           }),
@@ -95,7 +99,8 @@ class _EditJasaPageState extends State<EditJasaPage> {
         print('Response status: ${response.statusCode}');
         print('Response body: ${response.body}');
 
-        if (response.headers['content-type']?.contains('application/json') ?? false) {
+        if (response.headers['content-type']?.contains('application/json') ??
+            false) {
           final data = jsonDecode(response.body);
 
           if (data['status'] == 'success') {
@@ -109,6 +114,33 @@ class _EditJasaPageState extends State<EditJasaPage> {
       } catch (e) {
         _showError('Terjadi kesalahan: $e');
       }
+    }
+  }
+
+  Future<void> _confirmDeleteJasa() async {
+    final bool? confirmed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Konfirmasi Hapus'),
+          content: const Text('Apakah Anda yakin ingin menghapus jasa ini?'),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Batal'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Hapus'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed == true) {
+      _deleteJasa();
     }
   }
 
@@ -178,7 +210,7 @@ class _EditJasaPageState extends State<EditJasaPage> {
         actions: [
           IconButton(
             icon: const Icon(Icons.delete, color: Colors.white),
-            onPressed: _deleteJasa,
+            onPressed: _confirmDeleteJasa,
           ),
         ],
       ),
@@ -188,8 +220,6 @@ class _EditJasaPageState extends State<EditJasaPage> {
           key: _formKey,
           child: Column(
             children: <Widget>[
-              // Remove Image Upload Section
-
               // Name
               TextFormField(
                 controller: _nameController,
@@ -242,6 +272,9 @@ class _EditJasaPageState extends State<EditJasaPage> {
                   if (value == null || value.isEmpty) {
                     return 'Harga tidak boleh kosong.';
                   }
+                  if (double.tryParse(value) == null) {
+                    return 'Harga tidak valid.';
+                  }
                   return null;
                 },
               ),
@@ -263,7 +296,10 @@ class _EditJasaPageState extends State<EditJasaPage> {
                 ),
                 child: const Text(
                   'Simpan',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                  style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white),
                 ),
               ),
             ],

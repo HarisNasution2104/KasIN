@@ -21,10 +21,11 @@ class _AddBarangPageState extends State<AddBarangPage> {
   double _priceBuy = 0.0;
   double _priceSell = 0.0;
   int _quantity = 0;
-  String _category = '';
+  String _selectedCategoryId = '';
   String _code = '';
   File? _image;
-  List<String> _categories = [];
+  List<Map<String, dynamic>> _categories =
+      []; // List to hold categories with ID
   String _shopId = '';
 
   @override
@@ -46,7 +47,7 @@ class _AddBarangPageState extends State<AddBarangPage> {
 
     try {
       final response = await http.post(
-        Uri.parse('https://seputar-it.eu.org/Kategori/get_kategori.php?'),
+        Uri.parse('https://seputar-it.eu.org/Categories/get_kategori.php'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'shop_id': _shopId}),
       );
@@ -54,11 +55,14 @@ class _AddBarangPageState extends State<AddBarangPage> {
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body);
 
-        if (responseData['kategori'] != null &&
-            responseData['kategori'] is List) {
+        if (responseData['categories'] != null &&
+            responseData['categories'] is List) {
           setState(() {
-            _categories = (responseData['kategori'] as List)
-                .map((item) => item['nama'] as String)
+            _categories = (responseData['categories'] as List)
+                .map((item) => {
+                      'id': item['id'].toString(),
+                      'name': item['name'],
+                    })
                 .toList();
           });
         } else {
@@ -77,39 +81,49 @@ class _AddBarangPageState extends State<AddBarangPage> {
   Future<void> _submitForm() async {
     if (_formKey.currentState!.validate()) {
       _formKey.currentState!.save();
+      print(
+          'Selected Category ID: $_selectedCategoryId'); // Add this before sending the request
 
-      // Generate unique code if not provided
+      // Cek apakah barcode sudah diisi
       if (_code.isEmpty) {
+        // Jika barcode kosong, minta API untuk menghasilkan kode unik
         _code = await _generateUniqueCode();
         if (_code.isEmpty) {
-          return; // If code generation failed, exit the function
+          return; // Jika gagal mendapatkan kode, keluar dari fungsi
         }
       }
 
       const url = 'https://seputar-it.eu.org/Barang/add_barang.php';
 
-      final response = await http.post(
-        Uri.parse(url),
-        headers: {'Content-Type': 'application/json; charset=UTF-8'},
-        body: jsonEncode({
-          'shop_id': _shopId,
-          'name': _name,
-          'description': _description,
-          'price_buy': _priceBuy,
-          'price_sell': _priceSell,
-          'quantity': _quantity,
-          'category': _category,
-          'code': _code,
-          // Handle image upload if needed
-        }),
-      );
+      try {
+        final response = await http.post(
+          Uri.parse(url),
+          headers: {'Content-Type': 'application/json; charset=UTF-8'},
+          body: jsonEncode({
+            'shop_id': _shopId,
+            'name': _name,
+            'description': _description,
+            'price_buy': _priceBuy,
+            'price_sell': _priceSell,
+            'quantity': _quantity,
+            'category_id': _selectedCategoryId,
+            'code': _code,
+            // Handle image upload if needed
+          }),
+        );
 
-      final data = jsonDecode(response.body);
+        print(
+            'Response body: ${response.body}'); // Debugging: lihat data yang diterima
 
-      if (data['status'] == 'success') {
-        Navigator.of(context).pop();
-      } else {
-        _showError(data['message'] ?? 'Gagal menambahkan barang.');
+        final data = jsonDecode(response.body);
+
+        if (data['status'] == 'success') {
+          Navigator.of(context).pop();
+        } else {
+          _showError(data['message'] ?? 'Gagal menambahkan barang.');
+        }
+      } catch (e) {
+        _showError('Terjadi kesalahan saat memproses respons: $e');
       }
     }
   }
@@ -122,12 +136,19 @@ class _AddBarangPageState extends State<AddBarangPage> {
         body: jsonEncode({'shop_id': _shopId}),
       );
 
+      print(response.body); // Debugging: lihat data yang diterima
+
       if (response.statusCode == 200) {
-        final responseData = jsonDecode(response.body);
-        if (responseData['code'] != null) {
-          return responseData['code'] as String;
-        } else {
-          _showError('Gagal menghasilkan kode unik.');
+        try {
+          final responseData = jsonDecode(response.body);
+          if (responseData['code'] != null) {
+            return responseData['code'] as String;
+          } else {
+            _showError('Gagal menghasilkan kode unik.');
+            return ''; // Return an empty string or handle as needed
+          }
+        } catch (e) {
+          _showError('Data respons tidak valid: $e');
           return ''; // Return an empty string or handle as needed
         }
       } else {
@@ -225,17 +246,19 @@ class _AddBarangPageState extends State<AddBarangPage> {
                 children: [
                   Expanded(
                     child: DropdownButtonFormField<String>(
-                      value: _category.isNotEmpty ? _category : null,
+                      value: _selectedCategoryId.isNotEmpty
+                          ? _selectedCategoryId
+                          : null,
                       decoration: const InputDecoration(labelText: 'Kategori'),
                       items: _categories.map((category) {
                         return DropdownMenuItem<String>(
-                          value: category,
-                          child: Text(category),
+                          value: category['id'],
+                          child: Text(category['name']!),
                         );
                       }).toList(),
                       onChanged: (value) {
                         setState(() {
-                          _category = value!;
+                          _selectedCategoryId = value!;
                         });
                       },
                       validator: (value) {
@@ -251,8 +274,7 @@ class _AddBarangPageState extends State<AddBarangPage> {
                     onPressed: _navigateToCategories,
                   ),
                 ],
-              ),
-              // Stock and Code
+              ), // Stock and Code
               Row(
                 children: [
                   Expanded(
@@ -290,7 +312,8 @@ class _AddBarangPageState extends State<AddBarangPage> {
                 children: [
                   Expanded(
                     child: TextFormField(
-                      decoration: const InputDecoration(labelText: 'Harga Beli'),
+                      decoration:
+                          const InputDecoration(labelText: 'Harga Beli'),
                       keyboardType: TextInputType.number,
                       validator: (value) {
                         if (value == null || value.isEmpty) {
@@ -304,7 +327,8 @@ class _AddBarangPageState extends State<AddBarangPage> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: TextFormField(
-                      decoration: const InputDecoration(labelText: 'Harga Jual'),
+                      decoration:
+                          const InputDecoration(labelText: 'Harga Jual'),
                       keyboardType: TextInputType.number,
                       validator: (value) {
                         if (value == null || value.isEmpty) {
