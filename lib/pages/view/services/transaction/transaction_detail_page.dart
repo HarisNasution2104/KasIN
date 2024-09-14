@@ -45,19 +45,19 @@ class _TransactionsDetailPageState extends State<TransactionsDetailPage> {
   Future<void> _loadCategories() async {
     try {
       final response = await http.post(
-        Uri.parse('https://seputar-it.eu.org/Kategori/get_kategori.php'),
+        Uri.parse('https://seputar-it.eu.org/Categories/get_kategori.php'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'shop_id': _shopId}),
       );
 
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body);
-        if (responseData['kategori'] != null &&
-            responseData['kategori'] is List) {
+        if (responseData['categories'] != null &&
+            responseData['categories'] is List) {
           setState(() {
             categoryList.clear();
             categoryList.addAll(
-              (responseData['kategori'] as List)
+              (responseData['categories'] as List)
                   .map((item) => {
                         'id': item['id']?.toString() ?? '',
                         'nama': item['nama'] as String
@@ -119,7 +119,8 @@ class _TransactionsDetailPageState extends State<TransactionsDetailPage> {
         .where((item) =>
             (selectedCategoryId == null ||
                 item['category_id']?.toString() == selectedCategoryId) &&
-            (item['code'].toLowerCase().contains(_searchQuery.toLowerCase())))
+            (item['code']?.toLowerCase().contains(_searchQuery.toLowerCase()) ??
+                false))
         .toList();
   }
 
@@ -135,9 +136,8 @@ class _TransactionsDetailPageState extends State<TransactionsDetailPage> {
         .where((item) =>
             (selectedCategoryId == null ||
                 item['category_id']?.toString() == selectedCategoryId) &&
-            (item['unique_code']
-                .toLowerCase()
-                .contains(_searchQuery.toLowerCase())))
+            (item['code']?.toLowerCase().contains(_searchQuery.toLowerCase()) ??
+                false))
         .toList();
   }
 
@@ -166,6 +166,26 @@ class _TransactionsDetailPageState extends State<TransactionsDetailPage> {
     }
   }
 
+// Fungsi untuk mengecek jumlah barang yang sudah ditambahkan
+  int _getBarangCount(String code) {
+    final item = barangDitambahkan.firstWhere(
+      (b) => b['code'] == code,
+      orElse: () =>
+          {'code': code, 'quantity': 0}, // Berikan nilai default yang sesuai
+    );
+    return item['quantity'] ?? 0;
+  }
+
+// Fungsi untuk mengecek jumlah jasa yang sudah ditambahkan
+  int _getJasaCount(String code) {
+    final item = jasaDitambahkan.firstWhere(
+      (j) => j['code'] == code,
+      orElse: () =>
+          {'code': code, 'quantity': 0}, // Berikan nilai default yang sesuai
+    );
+    return item['quantity'] ?? 0;
+  }
+
   @override
   Widget build(BuildContext context) {
     final currencyFormat =
@@ -174,7 +194,8 @@ class _TransactionsDetailPageState extends State<TransactionsDetailPage> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.orange.shade900,
-        title: const Text('Transactions', style: TextStyle(color: Colors.white)),
+        title:
+            const Text('Transactions', style: TextStyle(color: Colors.white)),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context),
@@ -270,6 +291,9 @@ class _TransactionsDetailPageState extends State<TransactionsDetailPage> {
                       : filteredJasaList[index - filteredBarangList.length];
                   final hasImage = data['image_path'] != null &&
                       data['image_path'].isNotEmpty;
+                  final stockQuantity = data['quantity'] ?? 0;
+                  final price = double.parse(data['price_sell'] ?? '0');
+
                   return ListTile(
                     leading: hasImage
                         ? CircleAvatar(
@@ -279,8 +303,8 @@ class _TransactionsDetailPageState extends State<TransactionsDetailPage> {
                         : CircleAvatar(
                             backgroundColor: Colors.grey.shade200,
                             child: Text(
-                              data['name']?.substring(0, 2).toUpperCase() ??
-                                  'AD',
+                              (data['name']?.substring(0, 2).toUpperCase() ??
+                                  'AD'),
                               style: const TextStyle(color: Colors.black),
                             ),
                           ),
@@ -293,38 +317,42 @@ class _TransactionsDetailPageState extends State<TransactionsDetailPage> {
                             Text(isBarang ? data['name'] : data['name']),
                           ],
                         ),
-                        Container(
-                          padding:
-                              const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: Colors.orange.shade900,
-                            borderRadius: BorderRadius.circular(3),
+                        if (_getBarangCount(data['code']) > 0 ||
+                            _getJasaCount(data['code']) > 0)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 2, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.orange.shade900,
+                              borderRadius: BorderRadius.circular(3),
+                            ),
+                            child: Text(
+                              isBarang
+                                  ? '${_getBarangCount(data['code'])}'
+                                  : '${_getJasaCount(data['code'])}',
+                              style: const TextStyle(
+                                  color: Colors.white, fontSize: 11),
+                            ),
                           ),
-                          child: Text(
-                            isBarang ? '${data['quantity']}' : 'Unlimited',
-                            style: const TextStyle(color: Colors.white, fontSize: 11),
-                          ),
-                        ),
                       ],
                     ),
                     subtitle: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          isBarang ? data['code'] : data['unique_code'],
-                          style: const TextStyle(fontSize: 12, color: Colors.grey),
+                          isBarang ? data['code'] : data['code'],
+                          style:
+                              const TextStyle(fontSize: 12, color: Colors.grey),
                         ),
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
                             Text(
                               isBarang
-                                  ? currencyFormat
-                                      .format(double.parse(data['price_sell']))
-                                  : currencyFormat
-                                      .format(double.parse(data['price'])),
-                              style:
-                                  const TextStyle(color: Colors.black, fontSize: 12),
+                                  ? '$stockQuantity*${currencyFormat.format(price)}'
+                                  : '$stockQuantity*${currencyFormat.format(price)}',
+                              style: const TextStyle(
+                                  color: Colors.black, fontSize: 12),
                             ),
                           ],
                         ),
@@ -426,7 +454,7 @@ class _TransactionsDetailPageState extends State<TransactionsDetailPage> {
   void _tambahJasaKePesanan(Map<String, dynamic> data) {
     setState(() {
       final existingJasaIndex = jasaDitambahkan.indexWhere(
-        (j) => j['unique_code'] == data['unique_code'],
+        (j) => j['code'] == data['code'],
       );
 
       if (existingJasaIndex != -1) {
@@ -441,9 +469,9 @@ class _TransactionsDetailPageState extends State<TransactionsDetailPage> {
           'id': data['id'],
           'shop_id': data['shop_id'],
           'name': data['name'],
-          'unique_code': data['unique_code'],
+          'code': data['code'],
           'quantity': 1,
-          'price': data['price'],
+          'price': data['price_sell'],
         });
       }
       totalJasaDitambahkan = jasaDitambahkan.fold(
